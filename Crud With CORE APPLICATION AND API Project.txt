@@ -1,0 +1,1549 @@
+//// CODE FIRST APPROCH
+////////////CORE API
+ ///CORE API  CONTROLLER
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
+using NarendraCoreAPI.Database;
+using NarendraCoreAPI.Models;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Net;
+using System.Net.Http;
+using System.Threading.Tasks;
+
+namespace NarendraCoreAPI.Controllers
+{
+ 
+    public class EmpController : ControllerBase
+    {
+        private readonly ApplicationDBContext _db;
+
+        public EmpController(ApplicationDBContext db)
+        {
+            _db = db;
+        }
+
+        [HttpGet]
+        public List<string> Names()
+        {
+
+            List<string> obj = new List<string>()
+            {
+
+                "Narendra",
+                "Amit Chauhan",
+                "Raj Yadav"
+            };
+            return obj;
+        }
+
+        [HttpGet]
+        [Route("api/GetData")]
+        public List<Employee> GetAllData()
+        {
+            var res = _db.Employees.ToList();
+            return res;
+            
+        }
+        [HttpPost]
+        [Route("Api/AddData")]
+        public HttpResponseMessage SaveData(Employee obj)
+        {
+            if (obj.Id == 0)
+            {
+                _db.Employees.Add(obj);
+                _db.SaveChanges();
+            }
+            else
+            {
+                _db.Entry(obj).State =Microsoft.EntityFrameworkCore.EntityState.Modified;
+                _db.SaveChanges();
+            }
+            HttpResponseMessage res = new HttpResponseMessage(HttpStatusCode.OK);
+            return res;
+
+        }
+
+        [HttpGet]
+        [Route("Api/Edit")]
+        public Employee EditGetData(int Id)
+        {
+            var editres = _db.Employees.Where(m => m.Id == Id).First();
+            return editres;
+        }
+        [HttpGet]
+        [Route("Api/Delete")]
+        public HttpResponseMessage DeleteData(int Id)
+        {
+            var deleteres = _db.Employees.Where(m => m.Id == Id).First();
+            _db.Employees.Remove(deleteres);
+            _db.SaveChanges();
+            HttpResponseMessage res = new HttpResponseMessage(HttpStatusCode.OK);
+            return res;
+        }
+         
+        [HttpGet]
+        [Route("api/Login")]
+        public List<LoginModel> GetAll()
+        {
+            var res = _db.UserLogins.ToList();
+            return res;
+
+        }
+        [HttpGet]
+        [Route("api/UserLogin")]
+        public LoginModel UserLogin(LoginModel obj)
+        {
+            var res = _db.UserLogins.Where(a=>a.Email.ToLower()==obj.Email.ToLower()).FirstOrDefault();
+            if (res == null)
+            {
+                return null;
+            }
+            else
+            {
+                if(res.Email.ToLower() == obj.Email.ToLower() && res.Password == obj.Password)
+                {
+                    return res;
+                }
+                else
+                {
+
+                    return res;  
+                }
+            }
+
+        }
+    }
+
+}
+/////////////////////////////////////////////
+/// API MODEL
+////////////////////////
+using System;
+using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
+using System.Linq;
+using System.Threading.Tasks;
+
+namespace NarendraCoreAPI.Models
+{
+    public class Employee
+    {
+        public int Id { get; set; }
+    
+        public string Name { get; set; }
+        public DateTime DOB { get; set; }
+        public string MobileNo { get; set; }
+       
+        public string Email { get; set; }
+        
+        public string Password { get; set; }
+
+       
+        public string Address { get; set; }
+        public string ZipCode { get; set; }
+       
+        public string Company { get; set; }
+        public int Salary { get; set; }
+    }
+}
+using System;
+using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
+using System.Linq;
+using System.Threading.Tasks;
+
+namespace NarendraCoreAPI.Models
+{
+    public class LoginModel
+    {
+        [Key]
+        public int Id { get; set; }
+
+        public string Name { get; set; }
+        
+        public string Email { get; set; }
+      
+        public string Password { get; set; }
+         
+    }
+}
+///////////////////////////////////////////////
+//APP SETTING
+{
+  "Logging": {
+    "LogLevel": {
+      "Default": "Information",
+      "Microsoft": "Warning",
+      "Microsoft.Hosting.Lifetime": "Information"
+    }
+  },
+  "AllowedHosts": "*",
+  "ConnectionStrings": {
+    "DefaultConnection": "Server=CHETUIWK639\\SQLSERVER2019;Database=NaCoreDB;Trusted_Connection=true;"
+  }
+}
+////////////////////////////// STARTUP
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
+using Microsoft.OpenApi.Models;
+using NarendraCoreAPI.Database;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+
+namespace NarendraCoreAPI
+{
+    public class Startup
+    {
+        public Startup(IConfiguration configuration)
+        {
+            Configuration = configuration;
+        }
+
+        public IConfiguration Configuration { get; }
+
+        // This method gets called by the runtime. Use this method to add services to the container.
+        public void ConfigureServices(IServiceCollection services)
+        {
+
+            services.AddControllers();
+
+            //pass DB connection
+            services.AddDbContext<ApplicationDBContext>(option =>
+            {
+                option.UseSqlServer(Configuration.GetConnectionString("DefaultConnection"));
+            });
+
+
+
+            services.AddSwaggerGen(c =>
+            {
+                c.SwaggerDoc("v1", new OpenApiInfo { Title = "NarendraCoreAPI", Version = "v1" });
+            });
+        }
+
+        // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
+        public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
+        {
+            if (env.IsDevelopment())
+            {
+                app.UseDeveloperExceptionPage();
+                app.UseSwagger();
+                app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "NarendraCoreAPI v1"));
+            }
+
+            app.UseRouting();
+
+            app.UseAuthorization();
+
+            app.UseEndpoints(endpoints =>
+            {
+                endpoints.MapControllers();
+            });
+        }
+    }
+}
+/////////////////////////////////////////
+///// ApplicationDBContext
+/////////////////////////
+using Microsoft.EntityFrameworkCore;
+using NarendraCoreAPI.Models;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+
+namespace NarendraCoreAPI.Database
+{
+    public class ApplicationDBContext:DbContext
+    {
+        public ApplicationDBContext()
+        {
+        }
+
+        public ApplicationDBContext(DbContextOptions<ApplicationDBContext> options) : base(options)
+        {
+
+        }
+        public DbSet<Employee> Employees { get; set; }
+        public DbSet<LoginModel> UserLogins { get; set; }
+
+    }
+}
+
+///////////////////////////////////
+  
+
+////////////////////////////////////////////////
+ ///CORE CONTROLLER
+ using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
+using NarendraASPCoreApp.Database;
+using NarendraASPCoreApp.Models;
+using Newtonsoft.Json;
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
+using System.Net.Http;
+using System.Security.Claims;
+using System.Threading.Tasks;
+
+namespace NarendraASPCoreApp.Controllers
+{
+   /// [Authorize]
+    public class HomeController : Controller
+    {
+       
+        //private readonly ILogger<HomeController> _logger;
+
+        //public HomeController(ILogger<HomeController> logger)
+        //{
+        //    _logger = logger;
+        //}
+        private readonly ApplicationDBContext _Na;
+        public HomeController(ApplicationDBContext Na)
+        {
+            _Na = Na;
+        }
+        public IActionResult Index()
+        {
+            //Setp 3..
+            HttpContext.Session.SetString("Name", "Narendra");
+            var res = HttpContext.Session.GetString("Name");
+
+            return View();
+        }
+
+        public IActionResult Privacy()
+        {
+            return View();
+        }
+        public IActionResult ShowAllData()
+        {
+           /// var res = _Na.Employees.ToList();
+            //to fatch data from Api
+            //1st step
+            HttpClient clint = new HttpClient();
+
+            var data = clint.GetAsync("http://localhost:46045/api/GetData").Result;
+            //2nd step for read data
+            var readData = data.Content.ReadAsStringAsync().Result;
+
+            //3rd step convert json to CLASS OBJECT (razor syntax for view)
+
+            var res = JsonConvert.DeserializeObject<List<Employee>>(readData);
+
+            return View(res);
+        }
+        [HttpGet]
+        [AllowAnonymous]
+        public IActionResult AddEmp()
+        {
+            return View();
+        }
+        [HttpPost]
+        [AllowAnonymous]
+        public IActionResult AddEmp(Employee obj)
+        {
+            //1st step take data and convert into serialize form
+            HttpClient clint = new HttpClient();
+            var adddata = JsonConvert.SerializeObject(obj);
+
+            //step 2- Send data json f, UTF-8,which type of data
+
+            StringContent postData = new StringContent(adddata, System.Text.Encoding.UTF8, "application/json");
+            //Post data to api
+            var result = clint.PostAsync("http://localhost:46045/Api/AddData"+"?Name="+obj.Name+"&DOB="+ obj.DOB+"&MobileNo="+obj.MobileNo+
+                "&Email="+obj.Email+"&Password="+obj.Password+"&Address="+obj.Address+"&ZipCode="+obj.ZipCode+"&Company="+obj.Company+"&Salary="+obj.Salary+"&Id="+obj.Id, postData).Result;
+
+            TempData["Message"] = "Data Saved SuccsessFully..";
+            /*
+            if (obj.Id == 0)
+            {
+                _Na.Employees.Add(obj);
+                _Na.SaveChanges();
+            }
+            else
+            {
+                _Na.Entry(obj).State = Microsoft.EntityFrameworkCore.EntityState.Modified;
+                _Na.SaveChanges();
+            }
+            */
+            return RedirectToAction("ShowAllData");
+             
+        }
+        public IActionResult Edit(int Id)
+        {
+            // var edit = _Na.Employees.Where(m=>m.Id==Id).First();
+            //  return View("AddEmp", edit);
+
+            HttpClient clint = new HttpClient();
+            var editdata = clint.GetAsync("http://localhost:46045/Api/Edit" + "?Id=" + Id).Result;
+
+            var readData = editdata.Content.ReadAsStringAsync().Result;
+
+            //3rd step convert json to CLASS OBJECT (razor syntax for view)
+
+            var empres = JsonConvert.DeserializeObject<Employee>(readData);
+
+            return View("AddEmp", empres);
+             
+
+        }
+        public IActionResult Delete(int Id)
+        {
+            //var deleteItem = _Na.Employees.Where(m => m.Id == Id).First();
+            //_Na.Employees.Remove(deleteItem);
+
+            //_Na.SaveChanges();
+
+            HttpClient clint = new HttpClient();
+            var editdata = clint.GetAsync("http://localhost:46045/Api/Delete" + "?Id=" + Id).Result;
+            TempData["Message"] = "Data Deleted SuccsessFully..";
+            return RedirectToAction("ShowAllData");
+        }
+        [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
+        public IActionResult Error()
+        {
+            return View(new ErrorViewModel { RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier });
+        }
+        [AllowAnonymous]
+        [HttpGet]
+        public IActionResult Login()
+        {
+            return View();
+        }
+        [HttpPost]
+        [AllowAnonymous]
+        public IActionResult Login(UserLogin obj)
+        {
+            HttpClient clint = new HttpClient();
+            
+            var editdata = clint.GetAsync("http://localhost:46045/api/UserLogin" + "?Name=" + obj.Name + "&Email=" + obj.Email + "&Password=" + obj.Password + "&Id=" + obj.Id).Result;
+
+            var readData = editdata.Content.ReadAsStringAsync().Result;
+
+            //3rd step convert json to CLASS OBJECT (razor syntax for view)
+
+            var empres = JsonConvert.DeserializeObject<UserLogin>(readData);
+            
+            if (empres == null)
+            {
+                TempData["InvalidEmail"] = "Invalid Email..Please enter correct Email.. OR..";
+               
+            }
+            else
+            {
+                if (empres.Email ==obj.Email && empres.Password==obj.Password)
+                {
+                    HttpContext.Session.SetString("Name1", empres.Name);
+                    //strep 1---
+
+                    var claims = new[] { new Claim(ClaimTypes.Name,  empres.Name),
+                    new Claim(ClaimTypes.Email, empres.Email)};
+
+                    //step 2-- identity
+                    var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
+
+                    //strep 3---
+                    var authProperties = new AuthenticationProperties
+                    {
+                        IsPersistent = true
+                    };
+                    //strep 4--- take above values
+                    HttpContext.SignInAsync(
+                        CookieAuthenticationDefaults.AuthenticationScheme,
+                        new ClaimsPrincipal(identity), authProperties);
+                    TempData["Message"] = "You Login SuccsessFully..";
+                     
+                    return RedirectToAction("admin","ShowAllData");
+                }
+                else
+                {
+                    TempData["InvalidPass"] = "Invalid Password..Please enter correct password..";
+                }
+            }
+
+
+            /*
+             
+            var res = _Na.UserLogins.Where(a => a.Email.ToLower() == obj.Email.ToLower()).FirstOrDefault();
+            if (res == null)
+            {
+                TempData["InvalidEmail"] = "Invalid Email..Please enter correct Email..";
+            }
+            else
+            {
+                if(res.Email.ToLower()==obj.Email.ToLower() && res.Password == obj.Password)
+                {
+                    HttpContext.Session.SetString("Name1",res.Name);
+                    //strep 1---
+                     
+                    var claims = new[] { new Claim(ClaimTypes.Name, res.Name), 
+                    new Claim(ClaimTypes.Email, res.Email)};
+
+                    //step 2-- identity
+                    var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
+
+                    //strep 3---
+                    var authProperties = new AuthenticationProperties
+                    {
+                        IsPersistent = true
+                    };
+                    //strep 4--- take above values
+                    HttpContext.SignInAsync(
+                        CookieAuthenticationDefaults.AuthenticationScheme,
+                        new ClaimsPrincipal(identity), authProperties);
+
+                    return RedirectToAction("ShowAllData");
+                }
+                else
+                {
+                    TempData["InvalidPass"] = "Invalid Password..Please enter correct password..";
+                }
+            } 
+            */
+            return View();
+        }
+        public IActionResult LogOut()
+        {
+            HttpContext.SignOutAsync();
+            HttpContext.Session.Clear();   
+            return RedirectToAction("Login");
+        }
+        [AllowAnonymous]
+        public IActionResult ShowAllDataWithMvcApi()
+        {
+            /// var res = _Na.Employees.ToList();
+            //to fatch data from Api
+            //1st step
+            HttpClient clint = new HttpClient();
+
+            var data = clint.GetAsync("http://localhost:52217/Api/GetAllData").Result;
+            //2nd step for read data
+            var readData = data.Content.ReadAsStringAsync().Result;
+
+            //3rd step convert json to CLASS OBJECT (razor syntax for view)
+
+            var res = JsonConvert.DeserializeObject<List<Employee>>(readData);
+
+            return View(res);
+        }
+    }
+
+    internal class Employees
+    {
+    }
+}
+
+ 
+
+////----------------------------
+//ALL MODEL
+///////////////////////////////////////
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
+using NarendraASPCoreApp.Database;
+using NarendraASPCoreApp.Models;
+using Newtonsoft.Json;
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
+using System.Net.Http;
+using System.Security.Claims;
+using System.Threading.Tasks;
+
+namespace NarendraASPCoreApp.Controllers
+{
+   /// [Authorize]
+    public class HomeController : Controller
+    {
+       
+        //private readonly ILogger<HomeController> _logger;
+
+        //public HomeController(ILogger<HomeController> logger)
+        //{
+        //    _logger = logger;
+        //}
+        private readonly ApplicationDBContext _Na;
+        public HomeController(ApplicationDBContext Na)
+        {
+            _Na = Na;
+        }
+        public IActionResult Index()
+        {
+            //Setp 3..
+            HttpContext.Session.SetString("Name", "Narendra");
+            var res = HttpContext.Session.GetString("Name");
+
+            return View();
+        }
+
+        public IActionResult Privacy()
+        {
+            return View();
+        }
+        public IActionResult ShowAllData()
+        {
+           /// var res = _Na.Employees.ToList();
+            //to fatch data from Api
+            //1st step
+            HttpClient clint = new HttpClient();
+
+            var data = clint.GetAsync("http://localhost:46045/api/GetData").Result;
+            //2nd step for read data
+            var readData = data.Content.ReadAsStringAsync().Result;
+
+            //3rd step convert json to CLASS OBJECT (razor syntax for view)
+
+            var res = JsonConvert.DeserializeObject<List<Employee>>(readData);
+
+            return View(res);
+        }
+        [HttpGet]
+        [AllowAnonymous]
+        public IActionResult AddEmp()
+        {
+            return View();
+        }
+        [HttpPost]
+        [AllowAnonymous]
+        public IActionResult AddEmp(Employee obj)
+        {
+            //1st step take data and convert into serialize form
+            HttpClient clint = new HttpClient();
+            var adddata = JsonConvert.SerializeObject(obj);
+
+            //step 2- Send data json f, UTF-8,which type of data
+
+            StringContent postData = new StringContent(adddata, System.Text.Encoding.UTF8, "application/json");
+            //Post data to api
+            var result = clint.PostAsync("http://localhost:46045/Api/AddData"+"?Name="+obj.Name+"&DOB="+ obj.DOB+"&MobileNo="+obj.MobileNo+
+                "&Email="+obj.Email+"&Password="+obj.Password+"&Address="+obj.Address+"&ZipCode="+obj.ZipCode+"&Company="+obj.Company+"&Salary="+obj.Salary+"&Id="+obj.Id, postData).Result;
+
+            TempData["Message"] = "Data Saved SuccsessFully..";
+            /*
+            if (obj.Id == 0)
+            {
+                _Na.Employees.Add(obj);
+                _Na.SaveChanges();
+            }
+            else
+            {
+                _Na.Entry(obj).State = Microsoft.EntityFrameworkCore.EntityState.Modified;
+                _Na.SaveChanges();
+            }
+            */
+            return RedirectToAction("ShowAllData");
+             
+        }
+        public IActionResult Edit(int Id)
+        {
+            // var edit = _Na.Employees.Where(m=>m.Id==Id).First();
+            //  return View("AddEmp", edit);
+
+            HttpClient clint = new HttpClient();
+            var editdata = clint.GetAsync("http://localhost:46045/Api/Edit" + "?Id=" + Id).Result;
+
+            var readData = editdata.Content.ReadAsStringAsync().Result;
+
+            //3rd step convert json to CLASS OBJECT (razor syntax for view)
+
+            var empres = JsonConvert.DeserializeObject<Employee>(readData);
+
+            return View("AddEmp", empres);
+             
+
+        }
+        public IActionResult Delete(int Id)
+        {
+            //var deleteItem = _Na.Employees.Where(m => m.Id == Id).First();
+            //_Na.Employees.Remove(deleteItem);
+
+            //_Na.SaveChanges();
+
+            HttpClient clint = new HttpClient();
+            var editdata = clint.GetAsync("http://localhost:46045/Api/Delete" + "?Id=" + Id).Result;
+            TempData["Message"] = "Data Deleted SuccsessFully..";
+            return RedirectToAction("ShowAllData");
+        }
+        [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
+        public IActionResult Error()
+        {
+            return View(new ErrorViewModel { RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier });
+        }
+        [AllowAnonymous]
+        [HttpGet]
+        public IActionResult Login()
+        {
+            return View();
+        }
+        [HttpPost]
+        [AllowAnonymous]
+        public IActionResult Login(UserLogin obj)
+        {
+            HttpClient clint = new HttpClient();
+            
+            var editdata = clint.GetAsync("http://localhost:46045/api/UserLogin" + "?Name=" + obj.Name + "&Email=" + obj.Email + "&Password=" + obj.Password + "&Id=" + obj.Id).Result;
+
+            var readData = editdata.Content.ReadAsStringAsync().Result;
+
+            //3rd step convert json to CLASS OBJECT (razor syntax for view)
+
+            var empres = JsonConvert.DeserializeObject<UserLogin>(readData);
+            
+            if (empres == null)
+            {
+                TempData["InvalidEmail"] = "Invalid Email..Please enter correct Email.. OR..";
+               
+            }
+            else
+            {
+                if (empres.Email ==obj.Email && empres.Password==obj.Password)
+                {
+                    HttpContext.Session.SetString("Name1", empres.Name);
+                    //strep 1---
+
+                    var claims = new[] { new Claim(ClaimTypes.Name,  empres.Name),
+                    new Claim(ClaimTypes.Email, empres.Email)};
+
+                    //step 2-- identity
+                    var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
+
+                    //strep 3---
+                    var authProperties = new AuthenticationProperties
+                    {
+                        IsPersistent = true
+                    };
+                    //strep 4--- take above values
+                    HttpContext.SignInAsync(
+                        CookieAuthenticationDefaults.AuthenticationScheme,
+                        new ClaimsPrincipal(identity), authProperties);
+                    TempData["Message"] = "You Login SuccsessFully..";
+                     
+                    return RedirectToAction("admin","ShowAllData");
+                }
+                else
+                {
+                    TempData["InvalidPass"] = "Invalid Password..Please enter correct password..";
+                }
+            }
+
+
+            /*
+             
+            var res = _Na.UserLogins.Where(a => a.Email.ToLower() == obj.Email.ToLower()).FirstOrDefault();
+            if (res == null)
+            {
+                TempData["InvalidEmail"] = "Invalid Email..Please enter correct Email..";
+            }
+            else
+            {
+                if(res.Email.ToLower()==obj.Email.ToLower() && res.Password == obj.Password)
+                {
+                    HttpContext.Session.SetString("Name1",res.Name);
+                    //strep 1---
+                     
+                    var claims = new[] { new Claim(ClaimTypes.Name, res.Name), 
+                    new Claim(ClaimTypes.Email, res.Email)};
+
+                    //step 2-- identity
+                    var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
+
+                    //strep 3---
+                    var authProperties = new AuthenticationProperties
+                    {
+                        IsPersistent = true
+                    };
+                    //strep 4--- take above values
+                    HttpContext.SignInAsync(
+                        CookieAuthenticationDefaults.AuthenticationScheme,
+                        new ClaimsPrincipal(identity), authProperties);
+
+                    return RedirectToAction("ShowAllData");
+                }
+                else
+                {
+                    TempData["InvalidPass"] = "Invalid Password..Please enter correct password..";
+                }
+            } 
+            */
+            return View();
+        }
+        public IActionResult LogOut()
+        {
+            HttpContext.SignOutAsync();
+            HttpContext.Session.Clear();   
+            return RedirectToAction("Login");
+        }
+        [AllowAnonymous]
+        public IActionResult ShowAllDataWithMvcApi()
+        {
+            /// var res = _Na.Employees.ToList();
+            //to fatch data from Api
+            //1st step
+            HttpClient clint = new HttpClient();
+
+            var data = clint.GetAsync("http://localhost:52217/Api/GetAllData").Result;
+            //2nd step for read data
+            var readData = data.Content.ReadAsStringAsync().Result;
+
+            //3rd step convert json to CLASS OBJECT (razor syntax for view)
+
+            var res = JsonConvert.DeserializeObject<List<Employee>>(readData);
+
+            return View(res);
+        }
+    }
+
+    internal class Employees
+    {
+    }
+}
+///////
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
+using NarendraASPCoreApp.Database;
+using NarendraASPCoreApp.Models;
+using Newtonsoft.Json;
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
+using System.Net.Http;
+using System.Security.Claims;
+using System.Threading.Tasks;
+
+namespace NarendraASPCoreApp.Controllers
+{
+   /// [Authorize]
+    public class HomeController : Controller
+    {
+       
+        //private readonly ILogger<HomeController> _logger;
+
+        //public HomeController(ILogger<HomeController> logger)
+        //{
+        //    _logger = logger;
+        //}
+        private readonly ApplicationDBContext _Na;
+        public HomeController(ApplicationDBContext Na)
+        {
+            _Na = Na;
+        }
+        public IActionResult Index()
+        {
+            //Setp 3..
+            HttpContext.Session.SetString("Name", "Narendra");
+            var res = HttpContext.Session.GetString("Name");
+
+            return View();
+        }
+
+        public IActionResult Privacy()
+        {
+            return View();
+        }
+        public IActionResult ShowAllData()
+        {
+           /// var res = _Na.Employees.ToList();
+            //to fatch data from Api
+            //1st step
+            HttpClient clint = new HttpClient();
+
+            var data = clint.GetAsync("http://localhost:46045/api/GetData").Result;
+            //2nd step for read data
+            var readData = data.Content.ReadAsStringAsync().Result;
+
+            //3rd step convert json to CLASS OBJECT (razor syntax for view)
+
+            var res = JsonConvert.DeserializeObject<List<Employee>>(readData);
+
+            return View(res);
+        }
+        [HttpGet]
+        [AllowAnonymous]
+        public IActionResult AddEmp()
+        {
+            return View();
+        }
+        [HttpPost]
+        [AllowAnonymous]
+        public IActionResult AddEmp(Employee obj)
+        {
+            //1st step take data and convert into serialize form
+            HttpClient clint = new HttpClient();
+            var adddata = JsonConvert.SerializeObject(obj);
+
+            //step 2- Send data json f, UTF-8,which type of data
+
+            StringContent postData = new StringContent(adddata, System.Text.Encoding.UTF8, "application/json");
+            //Post data to api
+            var result = clint.PostAsync("http://localhost:46045/Api/AddData"+"?Name="+obj.Name+"&DOB="+ obj.DOB+"&MobileNo="+obj.MobileNo+
+                "&Email="+obj.Email+"&Password="+obj.Password+"&Address="+obj.Address+"&ZipCode="+obj.ZipCode+"&Company="+obj.Company+"&Salary="+obj.Salary+"&Id="+obj.Id, postData).Result;
+
+            TempData["Message"] = "Data Saved SuccsessFully..";
+            /*
+            if (obj.Id == 0)
+            {
+                _Na.Employees.Add(obj);
+                _Na.SaveChanges();
+            }
+            else
+            {
+                _Na.Entry(obj).State = Microsoft.EntityFrameworkCore.EntityState.Modified;
+                _Na.SaveChanges();
+            }
+            */
+            return RedirectToAction("ShowAllData");
+             
+        }
+        public IActionResult Edit(int Id)
+        {
+            // var edit = _Na.Employees.Where(m=>m.Id==Id).First();
+            //  return View("AddEmp", edit);
+
+            HttpClient clint = new HttpClient();
+            var editdata = clint.GetAsync("http://localhost:46045/Api/Edit" + "?Id=" + Id).Result;
+
+            var readData = editdata.Content.ReadAsStringAsync().Result;
+
+            //3rd step convert json to CLASS OBJECT (razor syntax for view)
+
+            var empres = JsonConvert.DeserializeObject<Employee>(readData);
+
+            return View("AddEmp", empres);
+             
+
+        }
+        public IActionResult Delete(int Id)
+        {
+            //var deleteItem = _Na.Employees.Where(m => m.Id == Id).First();
+            //_Na.Employees.Remove(deleteItem);
+
+            //_Na.SaveChanges();
+
+            HttpClient clint = new HttpClient();
+            var editdata = clint.GetAsync("http://localhost:46045/Api/Delete" + "?Id=" + Id).Result;
+            TempData["Message"] = "Data Deleted SuccsessFully..";
+            return RedirectToAction("ShowAllData");
+        }
+        [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
+        public IActionResult Error()
+        {
+            return View(new ErrorViewModel { RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier });
+        }
+        [AllowAnonymous]
+        [HttpGet]
+        public IActionResult Login()
+        {
+            return View();
+        }
+        [HttpPost]
+        [AllowAnonymous]
+        public IActionResult Login(UserLogin obj)
+        {
+            HttpClient clint = new HttpClient();
+            
+            var editdata = clint.GetAsync("http://localhost:46045/api/UserLogin" + "?Name=" + obj.Name + "&Email=" + obj.Email + "&Password=" + obj.Password + "&Id=" + obj.Id).Result;
+
+            var readData = editdata.Content.ReadAsStringAsync().Result;
+
+            //3rd step convert json to CLASS OBJECT (razor syntax for view)
+
+            var empres = JsonConvert.DeserializeObject<UserLogin>(readData);
+            
+            if (empres == null)
+            {
+                TempData["InvalidEmail"] = "Invalid Email..Please enter correct Email.. OR..";
+               
+            }
+            else
+            {
+                if (empres.Email ==obj.Email && empres.Password==obj.Password)
+                {
+                    HttpContext.Session.SetString("Name1", empres.Name);
+                    //strep 1---
+
+                    var claims = new[] { new Claim(ClaimTypes.Name,  empres.Name),
+                    new Claim(ClaimTypes.Email, empres.Email)};
+
+                    //step 2-- identity
+                    var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
+
+                    //strep 3---
+                    var authProperties = new AuthenticationProperties
+                    {
+                        IsPersistent = true
+                    };
+                    //strep 4--- take above values
+                    HttpContext.SignInAsync(
+                        CookieAuthenticationDefaults.AuthenticationScheme,
+                        new ClaimsPrincipal(identity), authProperties);
+                    TempData["Message"] = "You Login SuccsessFully..";
+                     
+                    return RedirectToAction("admin","ShowAllData");
+                }
+                else
+                {
+                    TempData["InvalidPass"] = "Invalid Password..Please enter correct password..";
+                }
+            }
+
+
+            /*
+             
+            var res = _Na.UserLogins.Where(a => a.Email.ToLower() == obj.Email.ToLower()).FirstOrDefault();
+            if (res == null)
+            {
+                TempData["InvalidEmail"] = "Invalid Email..Please enter correct Email..";
+            }
+            else
+            {
+                if(res.Email.ToLower()==obj.Email.ToLower() && res.Password == obj.Password)
+                {
+                    HttpContext.Session.SetString("Name1",res.Name);
+                    //strep 1---
+                     
+                    var claims = new[] { new Claim(ClaimTypes.Name, res.Name), 
+                    new Claim(ClaimTypes.Email, res.Email)};
+
+                    //step 2-- identity
+                    var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
+
+                    //strep 3---
+                    var authProperties = new AuthenticationProperties
+                    {
+                        IsPersistent = true
+                    };
+                    //strep 4--- take above values
+                    HttpContext.SignInAsync(
+                        CookieAuthenticationDefaults.AuthenticationScheme,
+                        new ClaimsPrincipal(identity), authProperties);
+
+                    return RedirectToAction("ShowAllData");
+                }
+                else
+                {
+                    TempData["InvalidPass"] = "Invalid Password..Please enter correct password..";
+                }
+            } 
+            */
+            return View();
+        }
+        public IActionResult LogOut()
+        {
+            HttpContext.SignOutAsync();
+            HttpContext.Session.Clear();   
+            return RedirectToAction("Login");
+        }
+        [AllowAnonymous]
+        public IActionResult ShowAllDataWithMvcApi()
+        {
+            /// var res = _Na.Employees.ToList();
+            //to fatch data from Api
+            //1st step
+            HttpClient clint = new HttpClient();
+
+            var data = clint.GetAsync("http://localhost:52217/Api/GetAllData").Result;
+            //2nd step for read data
+            var readData = data.Content.ReadAsStringAsync().Result;
+
+            //3rd step convert json to CLASS OBJECT (razor syntax for view)
+
+            var res = JsonConvert.DeserializeObject<List<Employee>>(readData);
+
+            return View(res);
+        }
+    }
+
+    internal class Employees
+    {
+    }
+}
+using System;
+
+namespace NarendraASPCoreApp.Models
+{
+    public class ErrorViewModel
+    {
+        public string RequestId { get; set; }
+
+        public bool ShowRequestId => !string.IsNullOrEmpty(RequestId);
+    }
+}
+
+
+
+
+/////////////////////////////////////////
+// VIEWS //////////////////////
+<!DOCTYPE html>
+
+@using Microsoft.AspNetCore.Http;
+@inject Microsoft.AspNetCore.Http.IHttpContextAccessor HttpContextAccesser;
+
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - NarendraASPCoreApp</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/css/site.css" />
+</head>
+<style>
+    body {
+        background-color: #d0f7f1;
+    }
+    header{
+        background-color:red;
+    }
+    .log{
+        position:absolute;
+        right:5px;
+        top:2px; 
+        background-color:#4ae1e1;
+    }
+    
+</style>
+<body>
+    <header>
+        <nav class="navbar navbar-expand-sm navbar-toggleable-sm navbar-light bg-white border-bottom box-shadow mb-3">
+            <div class="container" style="background-color:#767dfb">
+                <a class="navbar-brand" asp-area="" asp-controller="Home" asp-action="Index">NarendraASPCoreApp</a>
+                <button class="navbar-toggler" type="button" data-toggle="collapse" data-target=".navbar-collapse" aria-controls="navbarSupportedContent"
+                        aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+                <div class="navbar-collapse collapse d-sm-inline-flex justify-content-between">
+                    <ul class="navbar-nav flex-grow-1">
+
+
+                        @if (@HttpContextAccesser.HttpContext.Session.GetString("Name1") != null)
+                        {
+                            <li class="nav-item">
+                                <a class="nav-link table-success" asp-area="" asp-controller="Home" asp-action="Index">Home</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link table-warning" asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link text-dark" asp-area="" asp-controller="Home" asp-action="ShowAllData">Data</a>
+                            </li>
+
+                            <li class="log btn btn-light lll">
+                                <a class="nav-link text-dark" asp-area="" asp-controller="Home" asp-action="LogOut">LogOut</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link text-dark" asp-area="" asp-controller="Home" asp-action="AddEmp">Form</a>
+                            </li>
+                        }
+                        else
+                        {
+                            <li class="nav-item">
+                                <a class="nav-link text-dark" asp-area="" asp-controller="Home" asp-action="AddEmp">Form</a>
+                            </li>
+                            <li class="nav-item ">
+                                <a class="nav-link text-dark" asp-area="" asp-controller="Home" asp-action="Login">Login</a>
+                            </li>
+
+                        }
+                    </ul>
+                </div>
+            </div>
+        </nav>
+    </header>
+    <div class="container">
+        <main role="main" class="pb-3">
+            @RenderBody()
+        </main>
+    </div>
+
+    <footer class="border-top footer text-muted">
+        <div class="container">
+            &copy; 2023 - NarendraASPCoreApp - <a asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a>
+        </div>
+    </footer>
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js">
+
+    </script>
+    <script>
+        $(document).ready(function () {
+            $(".lll").click(function () {
+                alert("Are you sure you want LogOut...").css("text-color:red");
+            });
+        });
+    </script>
+    <partial name="_ValidationScriptsPartial">
+        @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>
+//////////////////////////////////
+@model List<NarendraASPCoreApp.Models.Employee>
+
+    <style>
+        .head {
+            background-color: #5e66fb;
+        }
+    </style>
+    <body> 
+        <partial name="Session">
+            <h5 style="color:#080ba8" class="text-sm-center temp">@TempData["Message"]</h5>
+            
+            <h5>Your All data </h5>
+            <table class="table table-bordered table-hover">
+                <tr class="head">
+                    <th>id</th>
+                    <th>name</th>
+                    <th>dob</th>
+                    <th>mobileNo</th>
+                    <th>Email</th>
+                    <th>Password</th>
+                    <th>Address</th>
+                    <th>ZipCode</th>
+                    <th>Company</th>
+                    <th>Salary</th>
+                   
+                </tr>
+                @foreach (var item in Model)
+                {
+                    <tr class="trr">
+                        <td>@item.Id</td>
+                        <td>@item.Name</td>
+                        <td>@item.DOB</td>
+                        <td>@item.MobileNo</td>
+                        <td>@item.Email</td>
+                        <td>@item.Password</td>
+                        <td>@item.Address</td>
+                        <td>@item.ZipCode</td>
+                        <td>@item.Company</td>
+                        <td>@item.Salary</td>
+                        <td><a class="btn btn-primary" asp-controller="Home" asp-action="Edit" asp-route-id="@item.Id">Edit</a></td>
+                        <td><a class="btn btn-danger" asp-controller="Home" asp-action="Delete" asp-route-id="@item.Id">Delete</a></td>
+                    </tr>
+                }
+            </table>
+    </body>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js">
+
+    </script>
+    <script>
+        $(document).ready(function () {
+            //alert("Login Successesfully..You are eligible...");
+            $(".temp").fadeOut(3000);
+            });
+     
+    </script>
+
+///////////////////////////////////////
+@model NarendraASPCoreApp.Models.Employee
+@*
+    For more information on enabling MVC for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
+*@
+@{
+}
+<style>
+    label {
+        color: black;
+    }
+</style>
+<partial name="Session">
+
+    <div asp-validation-summary="All">
+        <form asp-action="AddEmp" asp-controller="Home" method="post">
+            <div>
+                <input type="hidden" asp-for="Id" />
+            </div>
+            <div class="form-group">
+                <label style="color:red">*</label><label>Enter your full Name</label>
+                <input asp-for="Name" class="form-control" type="text" data-val="true" data-val-required="Please fill your  name..." placeholder="Enter Name here">
+                <span asp-validation-for="Name" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label style="color:red">*</label><label>Enter your DOB</label>
+                <input asp-for="DOB" class="form-control" type="date" placeholder="Enter Date of birth here">
+                <span asp-validation-for="DOB" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label style="color:red">*</label><label>Enter your Mobile No.</label>
+                <input asp-for="MobileNo" class="form-control" type="text" placeholder=" Enter mobile no here">
+
+            </div>
+            <div class="form-group">
+                <label style="color:red">*</label><label>Enter your full Email</label>
+                <input asp-for="Email" class="form-control" type="text" placeholder="Enter Email here">
+            </div>
+            <div class="form-group">
+                <label style="color:red">*</label><label>Enter your Password</label>
+                <input asp-for="Password" class="form-control" type="password" placeholder="Enter password here">
+            </div>
+            <div class="form-group">
+                <label style="color:red">*</label><label>Enter your full Address</label>
+                <textarea asp-for="Address" class="form-control" type="text" placeholder="Enter Address here"></textarea>
+            </div>
+            <div class="form-group">
+                <label>Enter your  ZipCode</label>
+                <input asp-for="ZipCode" class="form-control" type="text" placeholder="Enter ZipCode here">
+            </div>
+            <div class="form-group">
+                <label style="color:red">*</label><label>Enter your Company full Name</label>
+                <input asp-for="Company" class="form-control" type="checkbox" placeholder="Enter Company here">
+                <input asp-for="Company" class="form-control" type="checkbox" placeholder="Enter Company here">
+                <input asp-for="Company" class="form-control" type="checkbox" placeholder="Enter Company here">
+            </div>
+            <div class="form-group">
+                <label>Enter your salary</label>
+                <input asp-for="Salary" class="form-control" type="text" placeholder="Enter salary here">
+            </div>
+            <button type="submit" class="btn btn-primary">Submit</button>
+            <div>
+                <span asp-validation-for="MobileNo" class="text-danger"></span><br />
+                <span asp-validation-for="Email" class="text-danger"></span><br />
+                <span asp-validation-for="Password" class="text-danger"></span><br />
+                <span asp-validation-for="Address" class="text-danger"></span><br />
+                <span asp-validation-for="Company" class="text-danger"></span><br />
+            </div>
+        </form>
+        <div class="tex">
+            <h2 style="color:blue">If you are Alrady registered then <a href="http://localhost:4213/Home/Login" class="text-danger">Click Here</a> for Login..</h2>
+        </div>
+    </div>
+   
+/////////////////////////////////
+////PARTIAL VIEW
+@*
+    For more information on enabling MVC for empty projects, visit http://go.microsoft.com/fwlink/?LinkID=397860
+*@
+<!--Step 4-->
+@using Microsoft.AspNetCore.Http;
+@inject Microsoft.AspNetCore.Http.IHttpContextAccessor HttpContextAccesser;
+
+<!--Step 5-->
+<h1>@HttpContextAccesser.HttpContext.Session.GetString("Name1")</h1>
+ 
+
+
+///////////////////////////////////////
+// STARTUP FILE
+using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using NarendraASPCoreApp.Database;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+
+namespace NarendraASPCoreApp
+{
+    public class Startup
+    {
+        public Startup(IConfiguration configuration)
+        {
+            Configuration = configuration;
+        }
+
+        public IConfiguration Configuration { get; }
+
+        // This method gets called by the runtime. Use this method to add services to the container.
+        public void ConfigureServices(IServiceCollection services)
+        {
+            services.AddControllersWithViews();
+            //step 3
+            services.AddSingleton<IHttpContextAccessor, HttpContextAccessor>();
+            services.AddSession();
+
+            //pass DB connection
+            services.AddDbContext<ApplicationDBContext>(option =>
+            {
+                option.UseSqlServer(Configuration.GetConnectionString("DefaultConnection"));
+            });
+            //step 5---Login page redirect
+            services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
+                .AddCookie(a => a.LoginPath = new PathString("/Home/Login"));
+        }
+
+        // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
+        public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
+        {
+            if (env.IsDevelopment())
+            {
+                app.UseDeveloperExceptionPage();
+            }
+            else
+            {
+                app.UseExceptionHandler("/Home/Error");
+            }
+            app.UseStaticFiles();
+
+            app.UseRouting();
+            //step 2
+            app.UseSession();
+            //step 6---Login page redirect middelware
+            app.UseAuthentication();
+
+            app.UseAuthorization();
+
+            app.UseEndpoints(endpoints =>
+            {
+                endpoints.MapControllerRoute(
+                    name: "default",
+                    pattern: "{controller=Home}/{action=Login}/{id?}");
+            });
+        }
+    }
+}
+
+ 
+/////////////////////////// LAYOUT
+<!DOCTYPE html>
+
+@using Microsoft.AspNetCore.Http;
+@inject Microsoft.AspNetCore.Http.IHttpContextAccessor HttpContextAccesser;
+
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - NarendraASPCoreApp</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/css/site.css" />
+</head>
+<style>
+    body {
+        background-color: #d0f7f1;
+    }
+    header{
+        background-color:red;
+    }
+    .log{
+        position:absolute;
+        right:5px;
+        top:2px; 
+        background-color:#4ae1e1;
+    }
+    
+</style>
+<body>
+    <header>
+        <nav class="navbar navbar-expand-sm navbar-toggleable-sm navbar-light bg-white border-bottom box-shadow mb-3">
+            <div class="container" style="background-color:#767dfb">
+                <a class="navbar-brand" asp-area="" asp-controller="Home" asp-action="Index">NarendraASPCoreApp</a>
+                <button class="navbar-toggler" type="button" data-toggle="collapse" data-target=".navbar-collapse" aria-controls="navbarSupportedContent"
+                        aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+                <div class="navbar-collapse collapse d-sm-inline-flex justify-content-between">
+                    <ul class="navbar-nav flex-grow-1">
+
+
+                        @if (@HttpContextAccesser.HttpContext.Session.GetString("Name1") != null)
+                        {
+                            <li class="nav-item">
+                                <a class="nav-link table-success" asp-area="" asp-controller="Home" asp-action="Index">Home</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link table-warning" asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link text-dark" asp-area="" asp-controller="Home" asp-action="ShowAllData">Data</a>
+                            </li>
+
+                            <li class="log btn btn-light lll">
+                                <a class="nav-link text-dark" asp-area="" asp-controller="Home" asp-action="LogOut">LogOut</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link text-dark" asp-area="" asp-controller="Home" asp-action="AddEmp">Form</a>
+                            </li>
+                        }
+                        else
+                        {
+                            <li class="nav-item">
+                                <a class="nav-link text-dark" asp-area="" asp-controller="Home" asp-action="AddEmp">Form</a>
+                            </li>
+                            <li class="nav-item ">
+                                <a class="nav-link text-dark" asp-area="" asp-controller="Home" asp-action="Login">Login</a>
+                            </li>
+
+                        }
+                    </ul>
+                </div>
+            </div>
+        </nav>
+    </header>
+    <div class="container">
+        <main role="main" class="pb-3">
+            @RenderBody()
+        </main>
+    </div>
+
+    <footer class="border-top footer text-muted">
+        <div class="container">
+            &copy; 2023 - NarendraASPCoreApp - <a asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a>
+        </div>
+    </footer>
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js">
+
+    </script>
+    <script>
+        $(document).ready(function () {
+            $(".lll").click(function () {
+                alert("Are you sure you want LogOut...").css("text-color:red");
+            });
+        });
+    </script>
+    <partial name="_ValidationScriptsPartial">
+        @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>
+
+ 
+
+////////////////////////////////  
+ 
+
+////////////////////////////////  
+
+ 
+ 
+
+
+
+
+
+
+
